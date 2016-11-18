@@ -18,6 +18,48 @@
 (define <A-Z>
 	(range #\A #\Z))
 
+;any char but \ (do according to ascii table)
+(define <StringLiteralChar>
+	(new (*parser (char #\c))
+		 (*pack-with
+	     	(lambda (c)
+	     		(if (not (equal? c (char #\\)))
+	     			c
+	     			(void))))
+		done))
+
+(define <StringMetaChar>
+	(new (*parser (char #\\))
+		 (*parser (char #\"))
+		 (*parser (char #\t))
+		 (*parser (char #\f))
+		 (*parser (char #\n))
+		 (*parser (char #\r))
+		 (*disj 6)
+		done))
+
+(define <StringHexChar>
+	(new (*parser (char #\\))
+		 (*parser (char #\x))
+		 (*parser (char #\space))
+		 (*parser <HexChar>) *star
+		 (*caten 4)
+		done))
+
+(define <StringChar>
+	(new (*parser <StringLiteralChar>)
+		 (*parser <StringMetaChar>)
+		 (*parser <StringHexChar>)
+		 (*disj 3)
+		done))
+
+(define <String>
+	(new (*parser (char #\"))
+		 (*parser <StringChar>) *star
+		 (*parser (char #\"))
+		 (*caten 3)
+		done))
+
 (define <SymbolNonLetter>
 	(new (*parser (char #\!))
 		 (*parser (char #\$))
@@ -32,7 +74,7 @@
 		 (*parser (char #\?))
 		 (*parser (char #\/))
 		 (*disj 12)
-		 done))
+		done))
 
 (define <SymbolChar>
 	(new (*parser <digit-0-9>)
@@ -40,59 +82,66 @@
 		 (*parser <A-Z>)
 		 (*parser <SymbolNonLetter>)
 		 (*disj 4)
-		 done))
+		done))
 
 (define <Symbol>
 	(new (*parser <SymbolChar>)
 		 (*parser <SymbolChar>) *star 
 		 (*caten 2)
-		 done))
+		done))
 
-; ADD ( ) 
 (define <ProperList>
-	(new (*parser <Sexpr>) *star
-		 done))
-; ADD ( ) 
+	(new (*parser (char #\())
+		 (*parser <Sexpr>) *star
+		 (*parser (char #\)))
+		 (*caten 3)
+		done))
+
 (define <ImproperList>
-	(new (*parser <Sexpr>)
-		 (*parser <ProperList>)
+	(new (*parser (char #\())
+		 (*parser <Sexpr>)
+		 (*parser <Sexpr>) *star
 		 (*caten 2)
 		 (*parser (char #\space))
 		 (*parser (char #\.))
 		 (*parser (char #\space))
 		 (*parser <Sexpr>)
-		 done))
+		 (*parser (char #\)))
+		 (*caten 7)
+		done))
 
 (define <Vector>
 	(new (*parser (char #\#))
-		 (*parser <ProperList>)
-		 (*caten 2)
-		 done))
+		 (*parser (char #\())
+		 (*parser <Sexpr>) *star
+		 (*parser (char #\)))
+		 (*caten 4)
+		done))
 
 (define <Quoted>
 	(new (*parser (char #\'))
 		 (*parser <Sexpr>)
 		 (*caten 2)
-		 done))
+		done))
 
 (define <QuasiQuoted>
 	(new (*parser (char #\`))
 		 (*parser <Sexpr>)
 		 (*caten 2)
-		 done))
+		done))
 
 (define <Unquoted>
 	(new (*parser (char #\,))
 		 (*parser <Sexpr>)
 		 (*caten 2)
-		 done))
+		done))
 
 (define <UnquoteAndSpliced>
 	(new (*parser (char #\`))
 		 (*parser (char #\@))
 		 (*parser <Sexpr>)
 		 (*caten 3)
-		 done))
+		done))
 
 ;Testing
 (display (test-string <Symbol> "l"))
@@ -106,6 +155,8 @@
 (display (test-string <Symbol> "="))
 (newline)
 (display (test-string <Symbol> "?"))
+(newline)
+(display (test-string <StringMetaChar> "\\"))
 (newline)
 (display (test-string <ProperList> "(+ 3 2)"))
 (newline)
